@@ -3,9 +3,9 @@
 //
 // It applies the scheduler's hard constraints that matter during a drain:
 // cordoned and NotReady nodes, nodeSelector and required node affinity,
-// NoSchedule/NoExecute taints, and CPU, memory and pod-count requests.
-// Pod (anti-)affinity, topology spread and volume zone constraints are not
-// modelled, so a PASS means "fits by resources and node constraints".
+// NoSchedule/NoExecute taints, required pod anti-affinity, and CPU, memory
+// and pod-count requests. Required pod affinity, topology spread and volume
+// zone constraints are not modelled.
 package simulate
 
 import (
@@ -50,6 +50,7 @@ type nodeState struct {
 	allocatable Usage
 	used        Usage
 	cordoned    bool
+	pods        []*corev1.Pod
 }
 
 func (n *nodeState) free() Usage { return n.allocatable.sub(n.used) }
@@ -87,6 +88,7 @@ func New(nodes []corev1.Node, pods []corev1.Pod) *Cluster {
 		}
 		if st, ok := c.byName[p.Spec.NodeName]; ok {
 			st.used = st.used.add(Requests(p))
+			st.pods = append(st.pods, p)
 		}
 	}
 	return c
@@ -113,8 +115,16 @@ func (c *Cluster) Uncordon(name string) {
 
 // Release frees the resources a pod held on a node.
 func (c *Cluster) Release(nodeName string, p *corev1.Pod) {
-	if st, ok := c.byName[nodeName]; ok {
-		st.used = st.used.sub(Requests(p))
+	st, ok := c.byName[nodeName]
+	if !ok {
+		return
+	}
+	for i, q := range st.pods {
+		if q.Namespace == p.Namespace && q.Name == p.Name {
+			st.pods = append(st.pods[:i], st.pods[i+1:]...)
+			st.used = st.used.sub(Requests(p))
+			return
+		}
 	}
 }
 
@@ -143,6 +153,7 @@ func (c *Cluster) Place(p *corev1.Pod) (string, string) {
 		return "", explain(len(c.nodes), reasons)
 	}
 	best.used = best.used.add(req)
+	best.pods = append(best.pods, p)
 	return best.node.Name, ""
 }
 
@@ -158,6 +169,9 @@ func (c *Cluster) unfit(st *nodeState, p *corev1.Pod, req Usage, affinity nodeaf
 	}
 	if t, found := corev1helpers.FindMatchingUntoleratedTaint(st.node.Spec.Taints, p.Spec.Tolerations, hardTaint); found {
 		return "untolerated taint " + t.Key
+	}
+	if c.violatesAntiAffinity(st, p) {
+		return "pod anti-affinity"
 	}
 	free := st.free()
 	switch {
