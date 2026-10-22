@@ -173,3 +173,24 @@ func mustContain(t *testing.T, fs []Finding, status Status, substr string) {
 	}
 	t.Errorf("no %s finding containing %q in %+v", status, substr, fs)
 }
+
+func TestDrainSimulationPodAntiAffinity(t *testing.T) {
+	spread := func(name, node string) *corev1.Pod {
+		p := ownedPod(name, node, "ReplicaSet", "100m", "64Mi", map[string]string{"app": "web"})
+		p.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: &corev1.PodAntiAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
+				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "web"}},
+				TopologyKey:   "kubernetes.io/hostname",
+			}},
+		}}
+		return p
+	}
+	cs := newFake("v1.34.1",
+		drainNodeObj("w1", "4", "8Gi", false),
+		drainNodeObj("w2", "4", "8Gi", false),
+		spread("web-1", "w1"),
+		spread("web-2", "w2"),
+	)
+	fs := runCheck(t, DrainSimulation{}, Cluster{Client: cs}, testOptions("v1.35"))
+	mustContain(t, findingsFor(fs, "node/w1"), StatusFail, "app/web-1 (0/2 nodes are available: 1 cordoned, 1 pod anti-affinity)")
+}
