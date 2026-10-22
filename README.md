@@ -72,8 +72,16 @@ Pod は退避されず、PDB による拒否（HTTP 429）を API サーバー�
 
 ## インストール
 
+[Releases](https://github.com/OTA-EITA/kube-upgrade-preflight/releases) から OS に合ったバイナリをダウンロードするか、Go でインストールします。
+
 ```sh
 go install github.com/OTA-EITA/kube-upgrade-preflight/cmd/kube-upgrade-preflight@latest
+```
+
+コンテナイメージもあります（distroless、非 root で動作）。
+
+```sh
+docker run --rm -v ~/.kube:/home/nonroot/.kube:ro ghcr.io/ota-eita/kube-upgrade-preflight:latest --help
 ```
 
 ## 使い方
