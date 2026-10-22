@@ -1,6 +1,7 @@
 # kube-upgrade-preflight
 
 [![ci](https://github.com/OTA-EITA/kube-upgrade-preflight/actions/workflows/ci.yml/badge.svg)](https://github.com/OTA-EITA/kube-upgrade-preflight/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/OTA-EITA/kube-upgrade-preflight/badge)](https://securityscorecards.dev/viewer/?uri=github.com/OTA-EITA/kube-upgrade-preflight)
 
 Kubernetes のバージョンアップを**始める前に**、作業を止めたり壊したりする原因をまとめて洗い出す CLI です。
 ノードを 1 台ずつドレインしていくローリングアップデートを**メモリ上で dry-run** し、クラスタには一切変更を加えません。
