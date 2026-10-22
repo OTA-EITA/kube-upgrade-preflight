@@ -1,0 +1,45 @@
+# Workloads that make a node upgrade stall, used to prove the checks fire
+# against a real API server.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: preflight-e2e
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: preflight-e2e
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: web}
+  template:
+    metadata:
+      labels: {app: web}
+    spec:
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.10
+---
+# minAvailable 1 with a single replica allows 0 disruptions: drains hang.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web
+  namespace: preflight-e2e
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: web}
+---
+# A pod without a controller is deleted for good by kubectl drain --force.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug
+  namespace: preflight-e2e
+spec:
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
