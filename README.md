@@ -48,6 +48,7 @@ EKS などのバージョンアップでは、次のような「始めてから�
    - CPU / メモリ / Pod 数の requests（init コンテナ、sidecar、Pod overhead を含む）
    - nodeSelector と必須の nodeAffinity
    - NoSchedule / NoExecute の taint と toleration
+   - 必須の Pod anti-affinity（「1 ノードに 1 レプリカ」やゾーン分散。既存 Pod 側のルールも双方向に評価）
    - cordon 中・NotReady のノードは使わない
 4. ノードを uncordon して次のノードへ（前のノードから移った Pod は、移動先のノードの番で再び退避される）
 
@@ -62,7 +63,7 @@ EKS などのバージョンアップでは、次のような「始めてから�
 | WARN | emptyDir を使う Pod がいる（データが消える） |
 
 スケジューラの判定には Kubernetes 公式の [`k8s.io/component-helpers`](https://github.com/kubernetes/component-helpers) を使っています。
-Pod 間の (anti-)affinity、topology spread、ボリュームのゾーン制約はモデル化していないため、PASS は「リソースとノードの制約上は収まる」という意味です。
+必須の Pod affinity、topology spread、ボリュームのゾーン制約はモデル化していないため、PASS は「リソース・ノード・anti-affinity の制約上は収まる」という意味です。
 
 #### `--server-dry-run`: API サーバーによる確認
 
